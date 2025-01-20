@@ -58,8 +58,16 @@ with st.sidebar:
 
     if deck_id and hasattr(st.session_state, 'deck'):
         
+        col1, col2, col3 = st.columns(3)
+        i = 0
         for name, card in st.session_state.deck.commanders.iterrows():
-            st.image(card['img_url'], width=200)
+            if i % 3 == 0:
+                col1.image(card['img_url'], width=300)
+            elif i % 3 == 1:
+                col2.image(card['img_url'], width=300)
+            else:
+                col3.image(card['img_url'], width=300)
+            i += 1
         
         # Tag Scoring Interface
         st.subheader("Tag Scoring")

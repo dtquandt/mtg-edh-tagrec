@@ -94,7 +94,7 @@ class Deck:
     def _build_valid_card_pool(self):
         """Build pool of valid cards for recommendations."""
         card_pool = card_db[card_db.apply(lambda x: match_color_identity(self.color_identity, x['color_identity']), axis=1)]
-        self.card_pool = card_pool.drop(self.decklist.index)
+        self.card_pool = card_pool.drop([i for i in self.decklist.index if i in card_pool.index])
             
     def analyze_tags(self):
         """Analyze tag frequency in the deck."""

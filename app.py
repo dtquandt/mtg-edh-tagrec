@@ -6,7 +6,7 @@ from collections import OrderedDict
 from cardrec import card_db, Deck
 
 # Page config
-st.set_page_config(page_title="EDH TagRecs", layout="wide")
+st.set_page_config(page_title="EDH TagRec", layout="wide")
 st.title("MTG Commander - Tag-based Recommender")
 
 # Initialize session state for interface mode if not exists

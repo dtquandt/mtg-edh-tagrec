@@ -273,4 +273,4 @@ if hasattr(st.session_state, 'deck'):
     except Exception as e:
         st.error(f"Error processing deck: {str(e)}")
 else:
-    st.info("Enter an Archidekt deck URL to get started!")
+    st.info("Enter an Archidekt deck URL or select your commander(s) to get started!")

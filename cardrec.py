@@ -29,7 +29,13 @@ def load_card_database(filepath='data/oracle_data_webapp.f'):
     oracle['oracle_tags'] = oracle['oracle_tags'] + oracle['type_tags'] + oracle['keyword_tags']
     oracle['oracle_tags'] = oracle['oracle_tags'].apply(lambda x: sorted(list(set(x))))
     
-    relevant_cols = ['oracle_id', 'name', 'color_identity', 'oracle_tags', 'img_url', 'scryfall_uri', 'edhrec_rank']
+    oracle['is_commander'] = oracle['oracle_tags'].apply(
+        lambda x: 
+            ('type-legendary' in x and 'type-creature' in x)
+            or 'subtype-background' in x
+            or 'type-planeswalker' in x)
+    
+    relevant_cols = ['oracle_id', 'name', 'color_identity', 'oracle_tags', 'img_url', 'scryfall_uri', 'edhrec_rank', 'is_commander']
     return oracle[relevant_cols].set_index('name', drop=True)
 
 def match_color_identity(ci, card_ci):
@@ -57,18 +63,39 @@ def clean_tags(tags):
 class Deck:
     """Class to handle deck analysis and card recommendations."""
     
-    def __init__(self, archidect_deck_id):
+    def __init__(self, archidect_deck_id=None, commander_names=None):
+        """Initialize deck with either Archidekt ID or commander names."""
+        if archidect_deck_id is not None:
+            self._init_from_archidekt(archidect_deck_id)
+        elif commander_names is not None:
+            self._init_from_commanders(commander_names)
+        else:
+            raise ValueError('Must provide either archidect_deck_id or commander_names')
+            
+    def _init_from_archidekt(self, archidect_deck_id):
+        """Initialize deck from Archidekt ID."""
         self.archidect_deck = getDeckById(archidect_deck_id)
         if self.archidect_deck.format.name != 'COMMANDER_EDH':
             raise ValueError('Deck is not a commander deck')
         
-        self._determine_commanders()
+        self._determine_commanders_archidekt()
         self._determine_color_identity()
-        self._determine_decklist()
+        self._determine_decklist_archidekt()
         self._build_valid_card_pool()
+        
+    def _init_from_commanders(self, commander_names):
+        """Initialize deck from manually input commander names."""
+        try:
+            self.commanders = card_db.loc[commander_names]
+            self._determine_color_identity()
+            # Empty decklist except for commanders
+            self.decklist = self.commanders.copy()
+            self._build_valid_card_pool()
+        except KeyError as e:
+            raise ValueError(f'Commander not found in database: {e}')
     
-    def _determine_commanders(self):
-        """Identify the deck's commanders."""
+    def _determine_commanders_archidekt(self):
+        """Identify the deck's commanders from Archidekt."""
         deck_categories = self.archidect_deck.categories
         commanders = []
         for category in deck_categories:
@@ -81,8 +108,8 @@ class Deck:
         color_identity = self.commanders['color_identity'].sum()
         self.color_identity = list(set(color_identity))
     
-    def _determine_decklist(self):
-        """Get the full decklist."""
+    def _determine_decklist_archidekt(self):
+        """Get the full decklist from Archidekt."""
         deck_categories = self.archidect_deck.categories
         decklist = []
         for category in deck_categories:

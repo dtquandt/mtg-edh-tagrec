@@ -23,41 +23,89 @@ def get_all_tags():
         all_tags.update(tags)
     return sorted(list(all_tags))
 
+# Get all valid commander names
+@st.cache_data
+def get_commander_names():
+    return sorted(card_db[card_db['is_commander']].index.tolist())
+
 # Sidebar inputs
 with st.sidebar:
     st.header("Configuration")
-    # Archidekt URL input
-    deck_url = st.text_input(
-        "Archidekt Deck URL",
-        placeholder="https://archidekt.com/decks/10141244"
+    
+    # Input mode selection
+    input_mode = st.radio(
+        "Input Mode",
+        options=['Archidekt URL', 'Manual Commander Input'],
+        key='input_mode'
     )
     
-    # Extract deck ID from URL
-    deck_id = None
-    if deck_url:
-        match = re.search(r'/(\d+)', deck_url)
-        if match:
-            deck_id = int(match.group(1))
-            
-            # Initialize deck and tag scores when URL is first entered
-            if 'deck' not in st.session_state or st.session_state.get('current_deck_id') != deck_id:
-                try:
-                    st.session_state.deck = Deck(deck_id)
-                    # Get top 10 tags and their weights
-                    initial_scores = st.session_state.deck.build_score_dict()
-                    # Convert to OrderedDict and take top 10
-                    ordered_scores = OrderedDict(
-                        sorted(initial_scores.items(), key=lambda x: x[1], reverse=True)[:10]
-                    )
-                    st.session_state.initial_scores = ordered_scores
-                    st.session_state.tag_scores = ordered_scores
-                    st.session_state.current_deck_id = deck_id
-                except Exception as e:
-                    st.error(f"Error loading deck: {str(e)}")
-                    deck_id = None
-
-    if deck_id and hasattr(st.session_state, 'deck'):
+    if input_mode == 'Archidekt URL':
+        # Archidekt URL input
+        deck_url = st.text_input(
+            "Archidekt Deck URL",
+            placeholder="https://archidekt.com/decks/10141244"
+        )
         
+        # Extract deck ID from URL
+        deck_id = None
+        if deck_url:
+            match = re.search(r'/(\d+)', deck_url)
+            if match:
+                deck_id = int(match.group(1))
+                
+                # Initialize deck and tag scores when URL is first entered
+                if 'deck' not in st.session_state or st.session_state.get('current_deck_id') != deck_id:
+                    try:
+                        st.session_state.deck = Deck(archidect_deck_id=deck_id)
+                        st.session_state.current_deck_id = deck_id
+                        # Get top 10 tags and their weights
+                        initial_scores = st.session_state.deck.build_score_dict()
+                        # Convert to OrderedDict and take top 10
+                        ordered_scores = OrderedDict(
+                            sorted(initial_scores.items(), key=lambda x: x[1], reverse=True)[:10]
+                        )
+                        st.session_state.initial_scores = ordered_scores
+                        st.session_state.tag_scores = ordered_scores
+                    except Exception as e:
+                        st.error(f"Error loading deck: {str(e)}")
+                        deck_id = None
+    
+    else:
+        # Manual commander input
+        commander_options = get_commander_names()
+        selected_commanders = st.multiselect(
+            "Select Commander(s)",
+            options=commander_options,
+            help="You can select up to 2 commanders"
+        )
+        
+        if len(selected_commanders) > 0 and len(selected_commanders) <= 2:
+            if 'deck' not in st.session_state or st.session_state.get('current_commanders') != tuple(selected_commanders):
+                try:
+                    st.session_state.deck = Deck(commander_names=selected_commanders)
+                    st.session_state.current_commanders = tuple(selected_commanders)
+                    # Set up initial tag scores
+                    st.session_state.initial_scores = OrderedDict({
+                        'ramp': 1,
+                        'draw': 1,
+                        'card-advantage': 1,
+                        'removal': 1,
+                        'tutor': 1,
+                        'recursion': 1,
+                        'protects-permanent': 1,
+                        'sweeper': 1
+                    })
+                    st.session_state.tag_scores = st.session_state.initial_scores.copy()
+                except Exception as e:
+                    st.error(f"Error setting up deck: {str(e)}")
+                    selected_commanders = None
+        elif len(selected_commanders) > 2:
+            st.error("You can only select up to 2 commanders")
+            selected_commanders = None
+
+    # Continue with existing UI if deck is initialized
+    if hasattr(st.session_state, 'deck'):
+        # Display commander images
         col1, col2, col3 = st.columns(3)
         i = 0
         for name, card in st.session_state.deck.commanders.iterrows():
@@ -118,7 +166,6 @@ with st.sidebar:
                             'ramp': 1,
                             'draw': 1,
                             'card-advantage': 1,
-                            'protect'
                             'removal': 1,
                             'tutor': 1,
                             'recursion': 1,
@@ -184,7 +231,7 @@ with st.sidebar:
         st.session_state.total_rows = st.slider("Total rows", 1, 50, 25)
 
 # Main content
-if deck_id and hasattr(st.session_state, 'deck'):
+if hasattr(st.session_state, 'deck'):
     try:
         decklist, card_pool = st.session_state.deck.rank_cards(st.session_state.tag_scores)
         if st.session_state.include_deck_cards:

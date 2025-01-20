@@ -108,7 +108,6 @@ class Deck:
     def _determine_color_identity(self):
         """Determine the deck's color identity."""
         color_identity = self.commanders['color_identity'].sum()
-        print(color_identity)
         self.color_identity = list(set(color_identity))
     
     def _determine_decklist_archidekt(self):

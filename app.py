@@ -99,13 +99,13 @@ with st.sidebar:
                 
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    if st.button('Clear All Tags'):
+                    if st.button('Clear'):
                         st.session_state.tag_scores = OrderedDict()
                 with col2:
-                    if st.button('Reset to Initial'):
+                    if st.button('Reset'):
                         st.session_state.tag_scores = st.session_state.initial_scores
                 with col3:
-                    if st.button('Standard set'):
+                    if st.button('Standard'):
                         st.session_state.tag_scores = OrderedDict({
                             'ramp': 1,
                             'draw': 1,

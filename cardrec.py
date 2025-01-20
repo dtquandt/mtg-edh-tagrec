@@ -35,6 +35,8 @@ def load_card_database(filepath='data/oracle_data_webapp.f'):
             or 'subtype-background' in x
             or 'type-planeswalker' in x)
     
+    oracle['color_identity'] = oracle['color_identity'].apply(lambda x: [y for y in x if y])
+    
     relevant_cols = ['oracle_id', 'name', 'color_identity', 'oracle_tags', 'img_url', 'scryfall_uri', 'edhrec_rank', 'is_commander']
     return oracle[relevant_cols].set_index('name', drop=True)
 
@@ -106,6 +108,7 @@ class Deck:
     def _determine_color_identity(self):
         """Determine the deck's color identity."""
         color_identity = self.commanders['color_identity'].sum()
+        print(color_identity)
         self.color_identity = list(set(color_identity))
     
     def _determine_decklist_archidekt(self):
